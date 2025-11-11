@@ -19,6 +19,12 @@ reddit = praw.Reddit(
 def home():
     return jsonify({"status": "Reddit API connected"})
 
+@app.route("/status")
+def status():
+    return jsonify({"status": "Reddit API connected"})
+
+
+
 @app.route("/subreddit/<name>")
 def get_subreddit_posts(name):
     posts = []
