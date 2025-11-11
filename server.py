@@ -38,37 +38,47 @@ def get_leads():
         return jsonify({"error": "Reddit API not available"}), 500
 
     try:
-        # Broaden search scope
-        search_terms = [
-            keywords,
-            f"{keywords} advice",
-            f"{keywords} help",
-            f"{keywords} feedback",
-            f"how to {keywords}",
-        ]
+        # Split multiple keywords like "fasting, intermittentfasting"
+        terms = [t.strip() for t in keywords.split(",") if t.strip()]
+        if not terms:
+            terms = ["fasting"]
 
-        for term in search_terms:
-            for submission in reddit.subreddit("all").search(term, limit=10, sort="new"):
-                results.append({
-                    "title": submission.title,
-                    "url": f"https://www.reddit.com{submission.permalink}",
-                    "score": submission.score,
-                    "subreddit": submission.subreddit.display_name
-                })
+        for term in terms:
+            # Search each term separately in r/all
+            search_terms = [
+                term,
+                f"{term} advice",
+                f"{term} help",
+                f"{term} experience",
+                f"how to {term}",
+            ]
 
-        # Remove duplicates (by title)
+            for q in search_terms:
+                for submission in reddit.subreddit("all").search(q, limit=10, sort="new"):
+                    title = submission.title.lower()
+                    # Skip spammy or irrelevant posts
+                    if any(bad in title for bad in ["hire", "discord", "assignment", "essay", "gmail"]):
+                        continue
+
+                    results.append({
+                        "title": submission.title,
+                        "url": f"https://www.reddit.com{submission.permalink}",
+                        "score": submission.score,
+                        "subreddit": submission.subreddit.display_name
+                    })
+
+        # Remove duplicates by URL
         seen = set()
         unique_results = []
         for r in results:
-            if r["title"] not in seen:
+            if r["url"] not in seen:
                 unique_results.append(r)
-                seen.add(r["title"])
+                seen.add(r["url"])
+
+        return jsonify({"leads": unique_results})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-    return jsonify({"leads": unique_results})
-
 
 
 
