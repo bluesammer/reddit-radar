@@ -33,19 +33,42 @@ def status():
 def get_leads():
     keywords = request.args.get("keywords", "")
     results = []
+
+    if not reddit:
+        return jsonify({"error": "Reddit API not available"}), 500
+
     try:
-        # Search Reddit for matching posts
-        for submission in reddit.subreddit("all").search(keywords, limit=10):
-            results.append({
-                "title": submission.title,
-                "url": submission.url,
-                "score": submission.score,
-                "subreddit": submission.subreddit.display_name
-            })
+        # Broaden search scope
+        search_terms = [
+            keywords,
+            f"{keywords} advice",
+            f"{keywords} help",
+            f"{keywords} feedback",
+            f"how to {keywords}",
+        ]
+
+        for term in search_terms:
+            for submission in reddit.subreddit("all").search(term, limit=10, sort="new"):
+                results.append({
+                    "title": submission.title,
+                    "url": f"https://www.reddit.com{submission.permalink}",
+                    "score": submission.score,
+                    "subreddit": submission.subreddit.display_name
+                })
+
+        # Remove duplicates (by title)
+        seen = set()
+        unique_results = []
+        for r in results:
+            if r["title"] not in seen:
+                unique_results.append(r)
+                seen.add(r["title"])
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    return jsonify({"leads": results})
+    return jsonify({"leads": unique_results})
+
 
 
 
