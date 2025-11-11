@@ -44,20 +44,22 @@ def get_leads():
             terms = ["fasting"]
 
         for term in terms:
-            # Search each term separately in r/all
-            search_terms = [
-                term,
-                f"{term} advice",
-                f"{term} help",
-                f"{term} experience",
-                f"how to {term}",
+            # Target likely subreddits to keep results relevant
+            candidate_subs = [
+                "fasting", "intermittentfasting", "waterfasting",
+                "FastingScience", "AlternateDayFasting", "DryFasting",
+                "Health", "Nutrition"
             ]
 
-            for q in search_terms:
-                for submission in reddit.subreddit("all").search(q, limit=10, sort="new"):
+            for sub in candidate_subs:
+                for submission in reddit.subreddit(sub).search(term, limit=5, sort="new"):
                     title = submission.title.lower()
-                    # Skip spammy or irrelevant posts
-                    if any(bad in title for bad in ["hire", "discord", "assignment", "essay", "gmail"]):
+                    # Filter out spammy content
+                    if any(bad in title for bad in ["hire", "discord", "assignment", "essay", "gmail", "homework", "sex"]):
+                        continue
+
+                    # Only include posts that actually contain the term in the title
+                    if term.lower() not in title:
                         continue
 
                     results.append({
@@ -68,14 +70,12 @@ def get_leads():
                     })
 
         # Remove duplicates by URL
-        seen = set()
-        unique_results = []
-        for r in results:
-            if r["url"] not in seen:
-                unique_results.append(r)
-                seen.add(r["url"])
+        unique = {r["url"]: r for r in results}.values()
 
-        return jsonify({"leads": unique_results})
+        if not unique:
+            return jsonify({"leads": [{"title": f"No results found for {keywords}"}]})
+
+        return jsonify({"leads": list(unique)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
