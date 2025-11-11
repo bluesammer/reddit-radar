@@ -23,6 +23,43 @@ def home():
 def status():
     return jsonify({"status": "Reddit API connected"})
 
+@app.route("/suggest")
+def suggest():
+    query = request.args.get("query", "")
+    subreddits = []
+    if query:
+        for subreddit in reddit.subreddits.search(query, limit=5):
+            subreddits.append(subreddit.display_name)
+    return jsonify({"suggestions": subreddits})
+
+
+@app.route("/leads")
+def leads():
+    keywords = request.args.get("keywords", "")
+    if not keywords:
+        return jsonify({"error": "Missing keywords"}), 400
+
+    posts = []
+    for submission in reddit.subreddit("all").search(keywords, limit=10):
+        posts.append({
+            "title": submission.title,
+            "url": f"https://reddit.com{submission.permalink}",
+            "score": submission.score,
+            "subreddit": submission.subreddit.display_name
+        })
+    return jsonify(posts)
+
+
+@app.route("/message-outline")
+def message_outline():
+    post_id = request.args.get("post_id")
+    if not post_id:
+        return jsonify({"error": "Missing post_id"}), 400
+
+    post = reddit.submission(id=post_id)
+    outline = f"Hi, I saw your post '{post.title}' in r/{post.subreddit}. I think my product could help with that!"
+    return jsonify({"outline": outline})
+
 
 
 @app.route("/subreddit/<name>")
