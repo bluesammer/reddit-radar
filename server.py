@@ -29,6 +29,26 @@ def home():
 def status():
     return jsonify({"status": "OK", "reddit_ready": reddit is not None})
 
+@app.route("/leads")
+def get_leads():
+    keywords = request.args.get("keywords", "")
+    results = []
+    try:
+        # Search Reddit for matching posts
+        for submission in reddit.subreddit("all").search(keywords, limit=10):
+            results.append({
+                "title": submission.title,
+                "url": submission.url,
+                "score": submission.score,
+                "subreddit": submission.subreddit.display_name
+            })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"leads": results})
+
+
+
 @app.route("/suggest")
 def suggest():
     if not reddit:
